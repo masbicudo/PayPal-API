@@ -790,9 +790,9 @@ namespace PayPal.Version940
     /// <summary>
     /// 
     /// </summary>
-    public class PayPalPaymentRequestBase : IPayPalParentable, IPayPalModel
+    public abstract class PayPalPaymentRequestBase : IPayPalParentable, IPayPalModel
     {
-        public PayPalPaymentRequestBase()
+        protected PayPalPaymentRequestBase()
         {
             this.Items = new PayPalList<PayPalPaymentRequestItem>();
         }
@@ -850,51 +850,6 @@ namespace PayPal.Version940
     /// </summary>
     public class PayPalBasicPaymentRequest : PayPalPaymentRequestBase
     {
-        public PayPalBasicPaymentRequest()
-        {
-            this.Items = new PayPalList<PayPalPaymentRequestItem>();
-        }
-
-        [NameValue(KeyOrIndexName = "Index", NameRegex = @"^L_PAYMENTREQUEST_{PaymentIndex}_\w+?(?<Index>\d+)$", SaveOrder = 1)]
-        public PayPalList<PayPalPaymentRequestItem> Items
-        {
-            get { return this.item; }
-            set
-            {
-                // Validating the list.
-                if (value != null)
-                {
-                    var ancestor = this.FindAncestor<PayPalList<PayPalPaymentRequest>>();
-                    if (ancestor != null)
-                        if (ancestor.Count > 1 && value.Any(x => x.Category == ItemCategory.Digital))
-                            throw new Exception(PayPalResources.OnlyOnePaymentIsSupportedWhenThereAreDigitalGoods());
-                }
-
-                var old = PayPalParentableHelper.SetProperty(this, ref this.item, value);
-                var evt = new PayPalList<PayPalPaymentRequestItem>.ListChangeFunc(InsertOrSetItemEvent);
-                if (old != null)
-                {
-                    old.InsertItemEvent -= new PayPalList<PayPalPaymentRequestItem>.ListChangeFunc(InsertOrSetItemEvent);
-                    old.SetItemEvent -= new PayPalList<PayPalPaymentRequestItem>.ListChangeFunc(InsertOrSetItemEvent);
-                }
-                if (value != null)
-                {
-                    value.InsertItemEvent += new PayPalList<PayPalPaymentRequestItem>.ListChangeFunc(InsertOrSetItemEvent);
-                    value.SetItemEvent += new PayPalList<PayPalPaymentRequestItem>.ListChangeFunc(InsertOrSetItemEvent);
-                }
-            }
-        }
-        PayPalList<PayPalPaymentRequestItem> item;
-
-        bool InsertOrSetItemEvent(PayPalList<PayPalPaymentRequestItem> sender, int index, PayPalPaymentRequestItem item)
-        {
-            var ancestor = this.FindAncestor<PayPalList<PayPalPaymentRequest>>();
-            if (ancestor != null)
-                if (ancestor.Count > 1 && item.Category == ItemCategory.Digital)
-                    throw new Exception(PayPalResources.OnlyOnePaymentIsSupportedWhenThereAreDigitalGoods());
-
-            return true;
-        }
     }
 
     /// <summary>
@@ -1507,7 +1462,7 @@ namespace PayPal.Version940
         {
             get
             {
-                if (this.Category != null)
+                if (this.Category != ItemCategory.Undefined)
                     return amount ?? 0.00m;
                 return amount;
             }

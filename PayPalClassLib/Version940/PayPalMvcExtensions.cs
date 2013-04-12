@@ -25,10 +25,14 @@ namespace PayPal.Version940
             if (request == null)
                 throw new ArgumentNullException("request");
 
-            // Setting return and cancel URLs.
             var context = controller.Request.RequestContext;
-            UrlHelper url = new UrlHelper(context);
-            string urlBase = string.Format("{0}://{1}", context.HttpContext.Request.Url.Scheme, context.HttpContext.Request.Url.Authority);
+            if (context.HttpContext.Request.Url == null)
+                throw new Exception("Request Url must not be null");
+
+            // Setting return and cancel URLs.
+            var url = new UrlHelper(context);
+
+            string urlBase = context.HttpContext.Request.Url.GetLeftPart(UriPartial.Authority);
 
             if (request.ReturnURL == null)
                 request.ReturnURL = urlBase + url.Action(confirmAction);
@@ -43,7 +47,7 @@ namespace PayPal.Version940
         /// <param name="controller"></param>
         /// <param name="operation"></param>
         /// <returns></returns>
-        public static PayPalSetExpressCheckoutResult SetExpressCheckout(this Controller controller, PayPalSetExpressCheckoutOperation operation, string confirmAction = "PayPalConfirm", string cancelAction = "PayPalCancel")
+        public static PayPalSetExpressCheckoutResult SetExpressCheckout(this Controller controller, PayPalSetExpressCheckoutOperation operation, string confirmAction, string cancelAction)
         {
             if (controller == null)
                 throw new ArgumentNullException("controller");
@@ -56,7 +60,7 @@ namespace PayPal.Version940
             if (string.IsNullOrWhiteSpace(operationToUse.CancelURL) || string.IsNullOrWhiteSpace(operationToUse.ReturnURL))
             {
                 // Need to clone to avoid side effect on passed object.
-                if ((object)operationToUse == operation)
+                if (operationToUse == operation)
                     operationToUse = operation.Clone();
 
                 SetupExpressCheckoutUrls(controller, operationToUse, confirmAction, cancelAction);

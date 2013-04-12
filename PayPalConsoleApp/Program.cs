@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using PayPal.Version940;
-using System.Linq;
 using System.Collections.Specialized;
+using PayPal;
+using PayPal.Version940;
 
-namespace PayPal
+namespace PayPalConsoleApp
 {
     public static class Program
     {
@@ -164,7 +164,7 @@ namespace PayPal
                 }
             };
 
-            // Creating the arrages of 5 elements in 5 slots.
+            // arrangements of 5 elements in 5 slots.
             int index = 0;
             var arranges5in5 = new int[5 * 4 * 3 * 2 * 1][];
             for (int itA = 0; itA < 5; itA++)
@@ -204,7 +204,7 @@ namespace PayPal
                 ReturnURL = "http://mydomain/returnUrl",
                 CancelURL = "http://mydomain/cancelUrl",
 
-                LocaleCode = Version940.LocaleCode.Undefined,
+                LocaleCode = LocaleCode.Undefined,
 
                 SurveyChoice = new List<string>
                 {
