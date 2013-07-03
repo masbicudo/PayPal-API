@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Web.Mvc;
+using JetBrains.Annotations;
 
 namespace PayPal.Version940
 {
@@ -17,7 +18,7 @@ namespace PayPal.Version940
         /// </summary>
         /// <param name="controller"></param>
         /// <param name="request"></param>
-        public static void SetupExpressCheckoutUrls(this Controller controller, PayPalSetExpressCheckoutOperation request, string confirmAction, string cancelAction)
+        public static void SetupExpressCheckoutUrls(this Controller controller, PayPalSetExpressCheckoutOperation request, string confirmAction, string cancelAction, object values = null)
         {
             if (controller == null)
                 throw new ArgumentNullException("controller");
@@ -35,10 +36,10 @@ namespace PayPal.Version940
             string urlBase = context.HttpContext.Request.Url.GetLeftPart(UriPartial.Authority);
 
             if (request.ReturnURL == null)
-                request.ReturnURL = urlBase + url.Action(confirmAction);
+                request.ReturnURL = urlBase + url.Action(confirmAction, values);
 
             if (request.CancelURL == null)
-                request.CancelURL = urlBase + url.Action(cancelAction);
+                request.CancelURL = urlBase + url.Action(cancelAction, values);
         }
 
         /// <summary>
@@ -47,7 +48,7 @@ namespace PayPal.Version940
         /// <param name="controller"></param>
         /// <param name="operation"></param>
         /// <returns></returns>
-        public static PayPalSetExpressCheckoutResult SetExpressCheckout(this Controller controller, PayPalSetExpressCheckoutOperation operation, string confirmAction, string cancelAction)
+        public static PayPalSetExpressCheckoutResult SetExpressCheckout(this Controller controller, PayPalSetExpressCheckoutOperation operation, [AspMvcAction] string confirmAction, [AspMvcAction] string cancelAction, object routeData = null)
         {
             if (controller == null)
                 throw new ArgumentNullException("controller");
@@ -63,11 +64,12 @@ namespace PayPal.Version940
                 if (operationToUse == operation)
                     operationToUse = operation.Clone();
 
-                SetupExpressCheckoutUrls(controller, operationToUse, confirmAction, cancelAction);
+                SetupExpressCheckoutUrls(controller, operationToUse, confirmAction, cancelAction, routeData);
             }
 
             // Calling the PayPal API, and returning the result.
-            var api = new PayPalApiConfigurable();
+            var settings = DependencyResolver.Current.GetService<IPayPalApiSettings>();
+            var api = new PayPalApiConfigurable(settings ?? new PayPalApiSettingsFromConfigurationManager());
             var response = api.SetExpressCheckout(operationToUse);
             return response;
         }
@@ -75,7 +77,8 @@ namespace PayPal.Version940
         public static PayPalDoExpressCheckoutPaymentResult DoExpressCheckoutPayment(this Controller controller, PayPalDoExpressCheckoutPaymentOperation operation)
         {
             // Calling the PayPal API, and returning the result.
-            var api = new PayPalApiConfigurable();
+            var settings = DependencyResolver.Current.GetService<IPayPalApiSettings>();
+            var api = new PayPalApiConfigurable(settings ?? new PayPalApiSettingsFromConfigurationManager());
             var response = api.DoExpressCheckoutPayment(operation);
             return response;
         }

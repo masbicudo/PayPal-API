@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>PayPal</RootNamespace>
     <AssemblyName>PayPal</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -87,17 +87,20 @@
   <ItemGroup>
     <Compile Include="Extensions.cs" />
     <Compile Include="NameValue.cs" />
+    <Compile Include="ResharperAttributes.cs" />
+    <Compile Include="Version940\IPayPalApiSettings.cs" />
     <Compile Include="Version940\PayPalResources.cs" />
     <Compile Include="Version940\PayPalMvcExtensions.cs" />
     <Compile Include="Version940\IPayPalAppIdCredential.cs" />
     <Compile Include="Version940\PayPal.Model.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Version940\SettingsFromConfigurationManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Version940\PayPal.Methods.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Version940\PayPal.DerivedMethods.cs" />
+    <Compile Include="Version940\PayPalApiConfigurable.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

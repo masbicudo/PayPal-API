@@ -1,30 +1,18 @@
 ﻿using System;
-using System.Configuration;
 using System.Linq.Expressions;
 
 namespace PayPal.Version940
 {
     public class PayPalApiConfigurable : PayPalApi
     {
-        const string cannotChangePropertyMsg = "Cannot set the value of '{0}'. "
-                    + "Create a new '{1}' object, "
-                    + "or change the appSettings section of the config file: '{2}'.";
+        private readonly IPayPalApiSettings configurations;
 
-        internal static Exception ExceptionForCannotChangeProperty(Expression<Func<object>> exprProp, Type typeToCreate, string appSettingName)
+        public PayPalApiConfigurable(IPayPalApiSettings configurations)
         {
-            var propName = ExpressionHelper.PropertyInfoOf(exprProp).Name;
-            var typeName = typeToCreate.Name;
-            return new Exception(string.Format(cannotChangePropertyMsg, propName, typeName, appSettingName));
-        }
-
-        public PayPalApiConfigurable(string settingsToUse = null)
-        {
-            this.SettingsToUse = settingsToUse ?? ConfigurationManager.AppSettings["PayPal:SettingsToUse"];
+            this.configurations = configurations;
 
             // Getting settings ApiType.
-            var configKey = string.Format("PayPal:{0}.ApiType", this.SettingsToUse);
-            var apiType = ConfigurationManager.AppSettings[configKey];
-            switch (apiType.ToLowerInvariant())
+            switch (configurations.ApiType.ToLowerInvariant())
             {
                 case "sandbox":
                     base.ApiEnvironmentType = ApiEnvironmentType.Sandbox;
@@ -32,16 +20,29 @@ namespace PayPal.Version940
                 case "production":
                     base.ApiEnvironmentType = ApiEnvironmentType.Production;
                     break;
-                default: throw new Exception(string.Format("appSettings value not found: {0}", configKey));
+                default:
+                    var msgSetConfig = configurations.MessageToChangeProperty("ApiType");
+                    throw new Exception(string.Format("Invalid 'ApiType' value. {0}", msgSetConfig));
             }
         }
 
-        public string SettingsToUse { get; private set; }
+        internal static Exception ExceptionForCannotChangeProperty(Expression<Func<object>> exprProp, Type typeToCreate, string msg)
+        {
+            var propName = ExpressionHelper.PropertyInfoOf(exprProp).Name;
+            var typeName = typeToCreate.Name;
+            if (!string.IsNullOrEmpty(msg))
+                return new Exception(string.Format("Cannot set the value of '{0}'. "
+                    + "Create a new '{1}' object; "
+                    + " == or == {2}.", propName, typeName, msg));
+
+            return new Exception(string.Format("Cannot set the value of '{0}'. "
+                + "Create a new '{1}' object.", propName, typeName));
+        }
 
         public override ApiEnvironmentType ApiEnvironmentType
         {
             get { return base.ApiEnvironmentType; }
-            set { throw PayPalApiConfigurable.ExceptionForCannotChangeProperty(() => this.ApiEnvironmentType, typeof(PayPalApi), this.SettingsToUse); }
+            set { throw PayPalApiConfigurable.ExceptionForCannotChangeProperty(() => this.ApiEnvironmentType, typeof(PayPalApi), this.configurations.MessageToChangeProperty("ApiType")); }
         }
 
         public override PayPalSetExpressCheckoutResult SetExpressCheckout(PayPalSetExpressCheckoutOperation operation)
@@ -58,7 +59,7 @@ namespace PayPal.Version940
                 if (operationToUse != operation)
                     operationToUse = operation.Clone();
 
-                var locale = ConfigurationManager.AppSettings["PayPal:LocalCode"];
+                var locale = this.configurations.LocalCode;
                 LocaleCode outValue;
                 if (Enum.TryParse(locale, out outValue))
                     operationToUse.LocaleCode = outValue;
@@ -88,16 +89,15 @@ namespace PayPal.Version940
                 if (operationToUse != operation)
                     operationToUse = operation.Clone();
 
-                SetupCredential<T>(operationToUse);
+                SetupCredential(operationToUse);
             }
         }
 
-        public void SetupCredential<T>(T operation)
-            where T : PaypalOperation
+        public void SetupCredential(PaypalOperation operation)
         {
-            var user = ConfigurationManager.AppSettings[string.Format("PayPal:{0}.PayPalUser", this.SettingsToUse)];
-            var password = ConfigurationManager.AppSettings[string.Format("PayPal:{0}.PayPalPassword", this.SettingsToUse)];
-            var signature = ConfigurationManager.AppSettings[string.Format("PayPal:{0}.PayPalSignature", this.SettingsToUse)];
+            var user = this.configurations.PayPalUser;
+            var password = this.configurations.PayPalPassword;
+            var signature = this.configurations.PayPalSignature;
 
             if (!string.IsNullOrWhiteSpace(user) && !string.IsNullOrWhiteSpace(password) && !string.IsNullOrWhiteSpace(signature))
                 operation.Credential = new PayPalSignatureCredential
@@ -127,10 +127,7 @@ namespace PayPal.Version940
         public void SetupDefaultCurrencyCode<T>(T operation)
             where T : PayPalExpressCheckoutOperation
         {
-            var globalCurrencyCode = ConfigurationManager.AppSettings[string.Format("PayPal:CurrencyCode", this.SettingsToUse)];
-            var userCurrencyCode = ConfigurationManager.AppSettings[string.Format("PayPal:{0}.CurrencyCode", this.SettingsToUse)];
-
-            var currencyCodeStr = userCurrencyCode ?? globalCurrencyCode;
+            var currencyCodeStr = this.configurations.CurrencyCode;
 
             CurrencyCode currencyCode;
             if (!string.IsNullOrWhiteSpace(currencyCodeStr))
